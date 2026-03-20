@@ -1,6 +1,7 @@
 import uuid
 from decimal import Decimal
 
+from django.contrib.auth.models import User
 from django.test import TestCase
 
 from products.models import Product
@@ -19,6 +20,10 @@ from .services import apply_purchase_invoice, apply_purchase_return, compute_wei
 # Helpers
 # ---------------------------------------------------------------------------
 
+def make_user(username="testuser"):
+    return User.objects.create_user(username=username, password="pass")
+
+
 def make_supplier(**kwargs):
     defaults = {"name": "Test Supplier"}
     defaults.update(kwargs)
@@ -36,15 +41,18 @@ def make_product(**kwargs):
     return Product.objects.create(**defaults)
 
 
-def make_invoice(supplier, **kwargs):
+def make_invoice(supplier, user, **kwargs):
     defaults = {
         "invoice_number": "INV-001",
         "invoice_date": "2026-01-15",
         "status": "draft",
+        "subtotal": Decimal("0.00"),
+        "vat_amount": Decimal("0.00"),
         "total_amount": Decimal("0.00"),
+        "paid_amount": Decimal("0.00"),
     }
     defaults.update(kwargs)
-    return PurchaseInvoice.objects.create(supplier=supplier, **defaults)
+    return PurchaseInvoice.objects.create(supplier=supplier, created_by=user, **defaults)
 
 
 # ---------------------------------------------------------------------------
@@ -53,8 +61,9 @@ def make_invoice(supplier, **kwargs):
 
 class PurchaseInvoiceModelTest(TestCase):
     def setUp(self):
+        self.user = make_user()
         self.supplier = make_supplier()
-        self.invoice = make_invoice(self.supplier)
+        self.invoice = make_invoice(self.supplier, self.user)
 
     def test_invoice_created_with_uuid(self):
         self.assertIsInstance(self.invoice.id, uuid.UUID)
@@ -73,15 +82,29 @@ class PurchaseInvoiceModelTest(TestCase):
     def test_invoice_default_status_is_draft(self):
         self.assertEqual(self.invoice.status, "draft")
 
+    def test_invoice_has_created_by(self):
+        self.assertEqual(self.invoice.created_by, self.user)
+
+    def test_invoice_financial_fields_are_decimal(self):
+        self.assertIsInstance(self.invoice.subtotal, Decimal)
+        self.assertIsInstance(self.invoice.vat_amount, Decimal)
+        self.assertIsInstance(self.invoice.total_amount, Decimal)
+        self.assertIsInstance(self.invoice.paid_amount, Decimal)
+
     def test_invoice_number_unique(self):
         from django.db import IntegrityError
         with self.assertRaises(IntegrityError):
-            make_invoice(self.supplier, invoice_number="INV-001")
+            make_invoice(self.supplier, self.user, invoice_number="INV-001")
 
     def test_invoice_soft_delete(self):
         self.invoice.is_active = False
         self.invoice.save()
         self.assertFalse(PurchaseInvoice.objects.get(pk=self.invoice.pk).is_active)
+
+    def test_invoice_status_choices(self):
+        valid_statuses = {"draft", "confirmed", "partially_paid", "paid"}
+        choice_values = {c[0] for c in PurchaseInvoice.STATUS_CHOICES}
+        self.assertEqual(choice_values, valid_statuses)
 
 
 # ---------------------------------------------------------------------------
@@ -90,8 +113,9 @@ class PurchaseInvoiceModelTest(TestCase):
 
 class PurchaseInvoiceItemModelTest(TestCase):
     def setUp(self):
+        self.user = make_user()
         self.supplier = make_supplier()
-        self.invoice = make_invoice(self.supplier)
+        self.invoice = make_invoice(self.supplier, self.user)
         self.product = make_product()
         self.item = PurchaseInvoiceItem.objects.create(
             invoice=self.invoice,
@@ -128,6 +152,10 @@ class PurchaseInvoiceItemModelTest(TestCase):
         item.save()
         self.assertEqual(item.total_cost, Decimal("100.00"))
 
+    def test_item_product_is_from_products_app(self):
+        from products.models import Product as ProductModel
+        self.assertIsInstance(self.item.product, ProductModel)
+
 
 # ---------------------------------------------------------------------------
 # PurchaseReturn model tests
@@ -135,10 +163,11 @@ class PurchaseInvoiceItemModelTest(TestCase):
 
 class PurchaseReturnModelTest(TestCase):
     def setUp(self):
+        self.user = make_user()
         self.supplier = make_supplier()
-        self.invoice = make_invoice(self.supplier)
+        self.invoice = make_invoice(self.supplier, self.user)
         self.product = make_product()
-        self.item = PurchaseInvoiceItem.objects.create(
+        PurchaseInvoiceItem.objects.create(
             invoice=self.invoice,
             product=self.product,
             quantity=Decimal("10.000"),
@@ -179,8 +208,9 @@ class PurchaseReturnModelTest(TestCase):
 
 class PurchaseReturnItemModelTest(TestCase):
     def setUp(self):
+        self.user = make_user()
         self.supplier = make_supplier()
-        self.invoice = make_invoice(self.supplier)
+        self.invoice = make_invoice(self.supplier, self.user)
         self.product = make_product()
         self.inv_item = PurchaseInvoiceItem.objects.create(
             invoice=self.invoice,
@@ -286,13 +316,14 @@ class WeightedAverageCostTest(TestCase):
 
 class ApplyPurchaseInvoiceTest(TestCase):
     def setUp(self):
+        self.user = make_user()
         self.supplier = make_supplier()
         self.product = make_product(
             sku="SKU-100",
             average_cost=Decimal("0.00"),
             stock_quantity=Decimal("0.000"),
         )
-        self.invoice = make_invoice(self.supplier, invoice_number="INV-100")
+        self.invoice = make_invoice(self.supplier, self.user, invoice_number="INV-100")
         PurchaseInvoiceItem.objects.create(
             invoice=self.invoice,
             product=self.product,
@@ -319,7 +350,7 @@ class ApplyPurchaseInvoiceTest(TestCase):
     def test_apply_twice_updates_weighted_average(self):
         apply_purchase_invoice(self.invoice)
         # Second invoice: 10 units at 70.00 → new avg = (10*50 + 10*70)/20 = 60.00
-        invoice2 = make_invoice(self.supplier, invoice_number="INV-101")
+        invoice2 = make_invoice(self.supplier, self.user, invoice_number="INV-101")
         PurchaseInvoiceItem.objects.create(
             invoice=invoice2,
             product=self.product,
@@ -345,13 +376,16 @@ class ApplyPurchaseInvoiceTest(TestCase):
 
 class ApplyPurchaseReturnTest(TestCase):
     def setUp(self):
+        self.user = make_user()
         self.supplier = make_supplier()
         self.product = make_product(
             sku="SKU-200",
             average_cost=Decimal("50.00"),
             stock_quantity=Decimal("10.000"),
         )
-        self.invoice = make_invoice(self.supplier, invoice_number="INV-200", status="confirmed")
+        self.invoice = make_invoice(
+            self.supplier, self.user, invoice_number="INV-200", status="confirmed"
+        )
         self.inv_item = PurchaseInvoiceItem.objects.create(
             invoice=self.invoice,
             product=self.product,
