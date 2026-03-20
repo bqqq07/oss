@@ -125,6 +125,47 @@ class ProductModelTest(TestCase):
         self.product.save()
         self.assertFalse(Product.objects.get(pk=self.product.pk).is_active)
 
+    def test_product_parent_group_default_blank(self):
+        self.assertEqual(self.product.parent_group, "")
+
+    def test_product_scent_default_blank(self):
+        self.assertEqual(self.product.scent, "")
+
+    def test_product_size_label_default_blank(self):
+        self.assertEqual(self.product.size_label, "")
+
+    def test_product_has_expiry_default_false(self):
+        self.assertFalse(self.product.has_expiry)
+
+    def test_product_is_returnable_default_true(self):
+        self.assertTrue(self.product.is_returnable)
+
+    def test_product_min_stock_is_decimal(self):
+        p = Product.objects.get(pk=self.product.pk)
+        self.assertIsInstance(p.min_stock, Decimal)
+
+    def test_product_reorder_point_is_decimal(self):
+        p = Product.objects.get(pk=self.product.pk)
+        self.assertIsInstance(p.reorder_point, Decimal)
+
+    def test_product_new_fields_saved(self):
+        self.product.parent_group = "Fragrances"
+        self.product.scent = "Oud"
+        self.product.size_label = "100ml"
+        self.product.has_expiry = True
+        self.product.is_returnable = False
+        self.product.min_stock = Decimal("2.000")
+        self.product.reorder_point = Decimal("5.000")
+        self.product.save()
+        p = Product.objects.get(pk=self.product.pk)
+        self.assertEqual(p.parent_group, "Fragrances")
+        self.assertEqual(p.scent, "Oud")
+        self.assertEqual(p.size_label, "100ml")
+        self.assertTrue(p.has_expiry)
+        self.assertFalse(p.is_returnable)
+        self.assertEqual(p.min_stock, Decimal("2.000"))
+        self.assertEqual(p.reorder_point, Decimal("5.000"))
+
 
 class ProductBarcodeModelTest(TestCase):
     def setUp(self):

@@ -63,9 +63,16 @@ class Product(BaseModel):
         blank=True,
         related_name="products",
     )
+    parent_group = models.CharField(max_length=200, blank=True, default="")
+    scent = models.CharField(max_length=100, blank=True, default="")
+    size_label = models.CharField(max_length=50, blank=True, default="")
+    has_expiry = models.BooleanField(default=False)
+    is_returnable = models.BooleanField(default=True)
     cost_price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     selling_price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     reorder_level = models.DecimalField(max_digits=10, decimal_places=3, default=0)
+    min_stock = models.DecimalField(max_digits=10, decimal_places=3, default=0)
+    reorder_point = models.DecimalField(max_digits=10, decimal_places=3, default=0)
 
     class Meta:
         db_table = "products"
