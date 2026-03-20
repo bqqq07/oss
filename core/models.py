@@ -85,8 +85,7 @@ class RolePermission(BaseModel):
 
 
 class Employee(BaseModel):
-    first_name = models.CharField(max_length=100)
-    last_name = models.CharField(max_length=100)
+    full_name = models.CharField(max_length=200)
     email = models.EmailField(unique=True)
     phone = models.CharField(max_length=20, blank=True, default="")
     job_title = models.CharField(max_length=150, blank=True, default="")
@@ -103,14 +102,10 @@ class Employee(BaseModel):
 
     class Meta:
         db_table = "employees"
-        ordering = ["last_name", "first_name"]
+        ordering = ["full_name"]
 
     def __str__(self):
-        return f"{self.first_name} {self.last_name}"
-
-    @property
-    def full_name(self):
-        return f"{self.first_name} {self.last_name}"
+        return self.full_name
 
 
 class Device(BaseModel):

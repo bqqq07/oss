@@ -129,8 +129,7 @@ class RolePermissionModelTest(TestCase):
 class EmployeeModelTest(TestCase):
     def setUp(self):
         self.employee = Employee.objects.create(
-            first_name="Ahmed",
-            last_name="Ali",
+            full_name="Ahmed Ali",
             email="ahmed.ali@example.com",
             salary=Decimal("5000.00"),
         )
@@ -141,7 +140,7 @@ class EmployeeModelTest(TestCase):
     def test_employee_str(self):
         self.assertEqual(str(self.employee), "Ahmed Ali")
 
-    def test_employee_full_name_property(self):
+    def test_employee_full_name_field(self):
         self.assertEqual(self.employee.full_name, "Ahmed Ali")
 
     def test_employee_is_active_default_true(self):
@@ -159,8 +158,7 @@ class EmployeeModelTest(TestCase):
 
         with self.assertRaises(IntegrityError):
             Employee.objects.create(
-                first_name="Other",
-                last_name="User",
+                full_name="Other User",
                 email="ahmed.ali@example.com",
             )
 
@@ -173,8 +171,7 @@ class EmployeeModelTest(TestCase):
 class DeviceModelTest(TestCase):
     def setUp(self):
         self.employee = Employee.objects.create(
-            first_name="Sara",
-            last_name="Hassan",
+            full_name="Sara Hassan",
             email="sara@example.com",
         )
         self.device = Device.objects.create(
