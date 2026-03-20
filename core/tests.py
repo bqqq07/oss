@@ -4,7 +4,7 @@ from decimal import Decimal
 from django.contrib.auth.models import User
 from django.test import TestCase
 
-from .models import Device, Employee, Permission, Role, RolePermission, Settings, UserRole
+from .models import AuditLog, Device, Employee, Permission, Role, RolePermission, Settings, UserRole
 
 
 class RoleModelTest(TestCase):
@@ -249,3 +249,61 @@ class SettingsModelTest(TestCase):
         self.setting.is_active = False
         self.setting.save()
         self.assertFalse(Settings.objects.get(pk=self.setting.pk).is_active)
+
+
+class AuditLogModelTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="auditor", password="pass")
+        self.log = AuditLog.objects.create(
+            user=self.user,
+            action=AuditLog.ACTION_CREATE,
+            model_name="Product",
+            object_id="abc-123",
+            object_repr="Product: Vitamin C",
+            changes={"name": ["", "Vitamin C"], "price": ["", "25.00"]},
+            ip_address="192.168.1.1",
+        )
+
+    def test_created_with_uuid(self):
+        self.assertIsInstance(self.log.id, uuid.UUID)
+
+    def test_str(self):
+        s = str(self.log)
+        self.assertIn("create", s)
+        self.assertIn("Product", s)
+        self.assertIn("abc-123", s)
+
+    def test_has_created_at(self):
+        self.assertIsNotNone(self.log.created_at)
+
+    def test_no_updated_at(self):
+        self.assertFalse(hasattr(self.log, "updated_at"))
+
+    def test_no_is_active(self):
+        self.assertFalse(hasattr(self.log, "is_active"))
+
+    def test_changes_is_dict(self):
+        self.assertIsInstance(self.log.changes, dict)
+
+    def test_ip_address_stored(self):
+        self.assertEqual(self.log.ip_address, "192.168.1.1")
+
+    def test_user_set_null_on_user_delete(self):
+        self.user.delete()
+        self.log.refresh_from_db()
+        self.assertIsNone(self.log.user)
+
+    def test_action_choices(self):
+        actions = [c[0] for c in AuditLog.ACTION_CHOICES]
+        self.assertIn("create", actions)
+        self.assertIn("update", actions)
+        self.assertIn("delete", actions)
+
+    def test_changes_default_empty_dict(self):
+        log = AuditLog.objects.create(
+            action=AuditLog.ACTION_DELETE,
+            model_name="Role",
+            object_id="xyz-999",
+            object_repr="Role: Admin",
+        )
+        self.assertEqual(log.changes, {})

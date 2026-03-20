@@ -1,6 +1,7 @@
 import uuid
 
 from django.db import models
+from django.contrib.auth import get_user_model
 
 
 class BaseModel(models.Model):
@@ -162,3 +163,46 @@ class Settings(BaseModel):
 
     def __str__(self):
         return self.key
+
+
+class AuditLog(models.Model):
+    """
+    Immutable audit trail for create / update / delete actions across the system.
+
+    Not extending BaseModel intentionally: audit records must never be soft-deleted
+    or have an updated_at timestamp — they are append-only.
+    """
+
+    ACTION_CREATE = "create"
+    ACTION_UPDATE = "update"
+    ACTION_DELETE = "delete"
+    ACTION_CHOICES = [
+        (ACTION_CREATE, "Create"),
+        (ACTION_UPDATE, "Update"),
+        (ACTION_DELETE, "Delete"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        "auth.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="audit_logs",
+    )
+    action = models.CharField(max_length=50, choices=ACTION_CHOICES)
+    model_name = models.CharField(max_length=100)
+    object_id = models.CharField(max_length=100)
+    object_repr = models.CharField(max_length=500)
+    changes = models.JSONField(default=dict, blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "audit_logs"
+        ordering = ["-created_at"]
+        verbose_name = "Audit Log"
+        verbose_name_plural = "Audit Logs"
+
+    def __str__(self):
+        return f"{self.action} on {self.model_name}({self.object_id}) by {self.user}"
