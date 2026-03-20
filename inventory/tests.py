@@ -10,7 +10,7 @@ from .models import InventoryBalance, InventoryMovement
 
 class InventoryBalanceModelTest(TestCase):
     def setUp(self):
-        self.product = Product.objects.create(name="Test Product", sku="TEST-001")
+        self.product = Product.objects.create(full_name="Test Product", sku="TEST-001")
         self.balance = InventoryBalance.objects.create(
             product=self.product,
             quantity_on_hand=Decimal("100.000"),
@@ -62,7 +62,7 @@ class InventoryBalanceModelTest(TestCase):
 class InventoryMovementModelTest(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="warehouse", password="pass")
-        self.product = Product.objects.create(name="Widget", sku="WDG-001")
+        self.product = Product.objects.create(full_name="Widget", sku="WDG-001")
         self.movement = InventoryMovement.objects.create(
             product=self.product,
             movement_type="in",

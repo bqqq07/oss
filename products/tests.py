@@ -77,7 +77,7 @@ class ProductModelTest(TestCase):
         self.category = Category.objects.create(name="Phones")
         self.brand = Brand.objects.create(name="Apple")
         self.product = Product.objects.create(
-            name="iPhone 15",
+            full_name="iPhone 15",
             sku="IPH-15-001",
             category=self.category,
             brand=self.brand,
@@ -103,7 +103,7 @@ class ProductModelTest(TestCase):
         from django.db import IntegrityError
 
         with self.assertRaises(IntegrityError):
-            Product.objects.create(name="Other", sku="IPH-15-001")
+            Product.objects.create(full_name="Other", sku="IPH-15-001")
 
     def test_product_cost_price_is_decimal(self):
         self.assertIsInstance(self.product.cost_price, Decimal)
@@ -128,7 +128,7 @@ class ProductModelTest(TestCase):
 
 class ProductBarcodeModelTest(TestCase):
     def setUp(self):
-        self.product = Product.objects.create(name="Galaxy S24", sku="SAM-S24-001")
+        self.product = Product.objects.create(full_name="Galaxy S24", sku="SAM-S24-001")
         self.barcode = ProductBarcode.objects.create(
             product=self.product,
             barcode="6901234567890",

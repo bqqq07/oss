@@ -46,7 +46,7 @@ class Brand(BaseModel):
 
 
 class Product(BaseModel):
-    name = models.CharField(max_length=300)
+    full_name = models.CharField(max_length=300)
     sku = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True, default="")
     category = models.ForeignKey(
@@ -69,10 +69,10 @@ class Product(BaseModel):
 
     class Meta:
         db_table = "products"
-        ordering = ["name"]
+        ordering = ["full_name"]
 
     def __str__(self):
-        return f"{self.name} ({self.sku})"
+        return f"{self.full_name} ({self.sku})"
 
 
 class ProductBarcode(BaseModel):
