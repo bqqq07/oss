@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --sidebar-width: 240px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  direction: rtl;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+@layer components {
+  .card {
+    @apply bg-white rounded-xl shadow-sm border border-gray-100 p-4;
+  }
+  .stat-card {
+    @apply card flex flex-col gap-1;
+  }
+  .btn-primary {
+    @apply bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium;
+  }
+  .btn-secondary {
+    @apply bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium;
+  }
+  .badge-critical {
+    @apply bg-red-100 text-red-700 text-xs font-semibold px-2 py-0.5 rounded-full;
+  }
+  .badge-warning {
+    @apply bg-yellow-100 text-yellow-700 text-xs font-semibold px-2 py-0.5 rounded-full;
+  }
+  .badge-info {
+    @apply bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-0.5 rounded-full;
+  }
+  .badge-success {
+    @apply bg-green-100 text-green-700 text-xs font-semibold px-2 py-0.5 rounded-full;
+  }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
